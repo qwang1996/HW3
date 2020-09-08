@@ -1,0 +1,194 @@
+---
+title: "ADA HW2"
+ahthor: "Qian Wang"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+---
+
+
+```{r}
+#install packages might need
+
+library(foreign)
+library(haven) 
+library(readr)
+library(plyr)
+library(ggplot2)
+
+```
+
+
+# Part 1 
+  Import class one survey data from our Github site (https://github.com/kijohnson/ADA-FAll-2020) (The dataset called ‘Class 1 Survey Fall 2020.csv’ is located in the class one folder), calling the R dataframe that you create C1survey.
+```{r}
+#Import dataset from Github using read_csv function
+
+C1survey <- read_csv(
+  "https://raw.githubusercontent.com/kijohnson/ADA-FAll-2020/master/Class%20One/Class%201%20Survey%20Fall%202020.csv"
+  )
+
+
+```
+
+# Part 2 
+  Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
+```{r}
+
+#using dim function to determine the number of rows, which is equal to the number of observations and # of columns, which is equal to the number of variables
+dim(C1survey)
+
+```
+# Part 3
+  a. Rename the column variables to something shorter and that is descriptive of what the variable is about (for example like_dogs for the ‘Do you like dogs?’ question variable) and b. Display that they are renamed.
+```{r}
+
+#showing the original variable names
+colnames(C1survey)
+
+#rename the variable names using names function
+names(C1survey) <- c("ID","like_cat","like_dog","island_item","slogan","favorite_day","what_animal","favorite_food",
+                     "favorite_drink","favorite_season","favorite_month","hobby","program","specialization","statistical_software",
+                     "R_level","comfort_to_coding","coding_time","hope_to_class","area_interest","favorite_number","birth_day",
+                     "birth_month","home_country","home_state","home_city","education_level")
+
+#display the new names
+colnames(C1survey)
+
+```
+
+# Part 4 
+  Write code to determine and display the number of factor, integer, numerical, and character variables there are in the C1survey dataset.
+```{r}
+
+#3 functions are used: is.factor() is used to determine the class of one variable. sapply() applys is.factor() to every variables in C1survey dataset. sum() gives the sum of its argument. Since is.factor returns TRUE or FALSE, and TRUE = 1 and FALSE = 0, we eventually get the number of factor variables in the dataset.
+sum(sapply(C1survey, is.factor))
+sum(sapply(C1survey, is.integer))
+sum(sapply(C1survey, is.numeric))
+sum(sapply(C1survey, is.character))
+
+#okay I just checked the class demo code and I found it provides a smarter way of doing it...
+table(sapply(C1survey, class))
+
+```
+
+# Part 5 
+  a. Using code, check the bday and bmonth variables for any unusual or missing values. If you find any, b. describe what you will do with the unusual values in a comment before or immediately following the code that does it, and c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics
+
+```{r}
+
+#check if bday is numerical
+
+is.numeric(C1survey$birth_day)
+
+#it is not, so I use as.numeric to transform it into numeric variable
+C1survey$birth_day <- as.numeric(C1survey$birth_day)
+
+#as.number() cannot convert it into numeric variable, indicating that there are observations that are not numeric under this variable. To locate it, I use the following code. the error report from as.numeric lists the characterical values as NA. is.na function converts NA into TRUE or FALSE. Finally which() tells us the position of FALSE, which is also the position of character value.
+which(is.na(as.numeric(C1survey$birth_day)))
+
+#I find that 31th observation is a character giving the value "26-march", not the numeric value we hope it be. So we find our unusual value. I change its value from "26-march" to 26 using following code
+
+C1survey$birth_day <- replace(C1survey$birth_day, 31, 26)
+
+#now I can transform it into numeric variable
+C1survey$birth_day <- as.numeric(C1survey$birth_day)
+
+#check if there is any missing value
+which(is.na(C1survey$birth_day))
+
+#no missing value found, so we are good to go with bday. Now I repeat the same process to bmonth
+is.numeric(C1survey$birth_month)
+C1survey$birth_month <- as.numeric(C1survey$birth_month)
+
+#locate the character values under bmonth
+which(is.na(as.numeric(C1survey$birth_month)))
+
+#the error report indicates that 8th, 17th, 25th and 31th observations are character values. I use following code to replace the unwantted values with right values.
+C1survey$birth_month <- replace(C1survey$birth_month, c(8,17,25,31), c(12,8,8,3))
+
+#correction is done. Now I can convert it into numeric
+C1survey$birth_month <- as.numeric(C1survey$birth_month)
+
+#check missing values
+which(is.na(C1survey$birth_month))
+
+#finally, we should be expecting that the birth day be no larger than 31, and birth month be no larger than 12. I use following code to check it.
+which(C1survey$birth_day > 31)
+which(C1survey$birth_month > 12)
+
+#I found no such observations. So there is no unusual data in our dataset. Now I use median() to find the median of bday and bmonth
+median(C1survey$birth_day)
+median(C1survey$birth_month)
+
+```
+
+# Part 6
+  a. Create a new variable called bseason that gives the season according to Northern Meteorological season in which respondents were born (winter=12/1 to 2/29, spring=3/1 to 5/31, summer=6/1 to 8/31, fall=9/1 to 11/30). b. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct c. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code you turn in.
+
+```{r}
+
+#create a new variable named bseason according to which season respondents were born, using ifelse function
+C1survey$bseason <- ifelse(C1survey$birth_month == 3|C1survey$birth_month == 4|C1survey$birth_month == 5, "spring",
+                           ifelse(C1survey$birth_month == 6|C1survey$birth_month == 7|C1survey$birth_month == 8, "summer",
+                                  ifelse(C1survey$birth_month == 9|C1survey$birth_month == 10|C1survey$birth_month == 11,"fall", "winter")))
+
+#use table function to print the seasons and birth month
+muda <- table(C1survey$birth_month, C1survey$bseason)
+
+#use addmargins() to sum the columns. In conclusion, there are 7 students born in spring, 9 in summer, 10 in fall, and 6 in winter 
+addmargins(muda)
+
+```
+
+# Part 7 
+  Pick your favorite variable to analyze, come up with a question you want to answer with that variable, generate the code, and provide an answer to your question. Describe what you did using comments (i.e. #’s).
+
+```{r}
+
+#I want to study the relationship between people's level of comfort and their level of familiarity to R. I intend to do this study via a simple linear regression with level of familiarity to R as the explanatory variable and the level of comfort to coding as response variable.
+
+#check if they are numeric variables
+is.numeric(C1survey$R_level)
+is.numeric(C1survey$comfort_to_coding)
+
+#see if there is any missing value
+which(is.na(C1survey$R_level))
+which(is.na(C1survey$comfort_to_coding))
+
+#data visualization using ggplot2 package
+ggplot(data = C1survey, aes(x = R_level, y = comfort_to_coding)) +
+  geom_jitter(col = "red") +
+  geom_smooth(method = "lm",col = "black")
+
+#simple linear regression
+d1 <- summary(lm(data = C1survey, comfort_to_coding ~ R_level))
+d1
+
+#from the summary table, we see that the result is statistically significant. Therefore, we conclude that there is a model predicting the level of comfort to coding using R familiarity better than using the mean of comfort to coding.
+
+```
+
+44
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
